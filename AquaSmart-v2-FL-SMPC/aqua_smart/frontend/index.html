@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AquaSmart.</title>
+  <link rel="icon" type="image/png" href="/static/img/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
+  <meta name="theme-color" content="#0F2D4A" />
+  <script>
+    /* apply the saved theme (light by default) before the page paints */
+    (function () { var t = 'light'; try { t = localStorage.getItem('aquasmart-theme') || 'light'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();
+  </script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Navigation bar -->
+<header class="navbar">
+  <div class="navbar-inner">
+    <button class="brand" data-page="home" aria-label="AquaSmart home">AquaSmart<span class="brand-dot"></span></button>
+
+    <nav class="nav-links" id="nav-links">
+      <button class="nav-link active" data-page="home">Overview</button>
+      <button class="nav-link" data-page="ponds">Monitoring</button>
+      <button class="nav-link" data-page="predict">Predictions</button>
+      <button class="nav-link" data-page="analytics">Analytics</button>
+      <button class="nav-link" data-page="federated">Federated Learning &amp; SMPC</button>
+    </nav>
+
+    <div class="nav-right">
+      <div class="nav-status">
+        <span class="ping"></span>
+        <span class="lbl">Local Time</span>
+        <span class="time" id="live-time">--:--:--</span>
+      </div>
+      <button class="theme-btn" id="theme-switch" aria-label="Toggle theme" title="Toggle Theme">
+        <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /></svg><svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg>
+      </button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16" /> <path d="M4 12h16" /> <path d="M4 19h16" /></svg></button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- OVERVIEW (home) -->
+  <div class="page overview active" id="page-home">
+    <div class="ov-wrap">
+
+      <div class="hero">
+        <h1>Welcome, Fish Farmer!</h1>
+        <p>Everything you need to care for your fish, made simple and clear.</p>
+      </div>
+
+      <div class="kpi-grid" id="kpi-cards"></div>
+
+      <div class="ov-grid">
+
+        <div class="ov-5 ov-stack">
+          <div class="card">
+            <h2 class="panel-title">Feeding Recommendation</h2>
+            <div id="feed-answer"></div>
+          </div>
+
+          <div class="card">
+            <h2 class="panel-title" style="margin-bottom:20px">Feed Calculator</h2>
+            <div class="calc-grid">
+              <div class="calc-5">
+                <label for="num-fish" class="calc-label">Number of fish</label>
+                <input type="number" id="num-fish" class="calc-input" value="200" min="1" />
+              </div>
+              <div class="calc-4">
+                <label for="avg-weight" class="calc-label">Average Fish Weight (g)</label>
+                <input type="number" id="avg-weight" class="calc-input" value="80" min="1" />
+              </div>
+              <div class="calc-3">
+                <button id="calc-btn" class="calc-btn" onclick="calcFeed()">Calculate</button>
+              </div>
+            </div>
+            <div class="calc-result">
+              <div class="line">Recommended daily feed: <span id="feed-amount" class="amt">0.48</span> kg</div>
+              <p class="note">Estimated using a Ridge Regression model trained on 21 features.</p>
+              <p class="extra" id="feed-extra"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ov-4">
+          <div class="card">
+            <h2 class="panel-title" style="margin-bottom:24px">Daily Tips</h2>
+            <div class="tip-list" id="tips"></div>
+          </div>
+        </div>
+
+        <div class="ov-3">
+          <div class="card">
+            <h2 class="panel-title" style="margin-bottom:24px">Pond Overview</h2>
+            <div class="ov-ponds" id="ov-ponds"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card trend-panel">
+        <div class="trend-head">
+          <h2 class="panel-title">24h Parameter Trends</h2>
+          <div class="seg" id="trend-seg">
+            <button data-param="temperature" class="active" onclick="setTrendParam('temperature')">Temp</button>
+            <button data-param="dissolved_oxygen" onclick="setTrendParam('dissolved_oxygen')">DO</button>
+            <button data-param="ph" onclick="setTrendParam('ph')">pH</button>
+            <button data-param="wqi" onclick="setTrendParam('wqi')">WQI</button>
+          </div>
+        </div>
+        <div class="trend-box"><canvas id="trendChart"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MONITORING -->
+  <div class="page flow" id="page-ponds">
+    <div class="ov-wrap">
+      <div class="hero">
+        <h1>Monitoring</h1>
+        <p>Real-time status of all fish ponds</p>
+      </div>
+      <div class="mon-grid" id="ponds-grid"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- PREDICTIONS -->
+  <div class="page flow" id="page-predict">
+    <div class="ov-wrap pr-wrap">
+      <div class="pr-stack">
+
+        <div class="hero">
+          <h1>Predictions</h1>
+          <p>Enter water parameters to get an ML-powered feeding recommendation</p>
+        </div>
+
+        <div class="card pr-form-card">
+          <div class="pr-form-head"><h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3" /> <path d="M12 19H3" /> <path d="M14 3v4" /> <path d="M16 17v4" /> <path d="M21 12h-9" /> <path d="M21 19h-5" /> <path d="M21 5h-7" /> <path d="M8 10v4" /> <path d="M8 12H3" /></svg>Water Parameters</h2></div>
+          <form id="predict-form" class="pr-form">
+            <div class="pr-fields">
+            <div>
+              <div class="pr-label-row"><label for="f-temp">Temperature (°C)</label><span>22-26</span></div>
+              <input type="number" step="0.1" id="f-temp" value="24" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-do">Dissolved O₂ (mg/L)</label><span>min 5</span></div>
+              <input type="number" step="0.1" id="f-do" value="7.0" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-ph">pH</label><span>6.5-8.5</span></div>
+              <input type="number" step="0.1" id="f-ph" value="7.2" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-turb">Turbidity (NTU)</label><span>max 30</span></div>
+              <input type="number" step="0.1" id="f-turb" value="12" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-ammo">Ammonia (mg/L)</label><span>&lt; 0.02</span></div>
+              <input type="number" step="0.001" id="f-ammo" value="0.008" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-nit">Nitrate (mg/L)</label><span>max 10</span></div>
+              <input type="number" step="0.1" id="f-nit" value="3.0" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-fw">Avg Fish Weight (g)</label></div>
+              <input type="number" id="f-fw" value="80" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-pop">Fish Population</label></div>
+              <input type="number" id="f-pop" value="300" class="pr-input" required />
+            </div>
+            <div>
+              <div class="pr-label-row"><label for="f-feed">Base Daily Feed (kg)</label></div>
+              <input type="number" id="f-feed" value="5" class="pr-input" required />
+            </div>
+            </div>
+            <button type="submit" class="pr-btn" id="get-rec-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /></svg>Get Recommendation</button>
+          </form>
+        </div>
+
+        <div class="pr-output" id="pr-output" hidden>
+        <div class="pr-results">
+          <div class="card pr-rec">
+            <h2 class="panel-title">ML Recommendation</h2>
+            <div class="rec-banner" id="rec-banner" data-state="good">
+              <div class="rec-text">
+                <div class="rec-head"><span id="rec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /> <path d="m16 9-5.5 5.5L8 12" /></svg></span><h3 id="rec-title">Feeding recommended</h3></div>
+                <p class="rec-sub" id="rec-sub">Water conditions are great right now.</p>
+                <p class="rec-note" id="rec-note">Your fish are healthy and ready to eat.</p>
+              </div>
+              <div class="rec-badge">
+                <span class="l">Recommended Feed</span>
+                <span class="n" id="rec-feed">0.70</span>
+                <span class="u">kg / day</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pr-kpis">
+        <div class="pr-kpi">
+          <div class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></svg><span>Water Quality Index</span></div>
+          <div class="v" id="kpi-wqi">93.61</div>
+          <p class="s" id="kpi-wqi-label">Excellent</p>
+        </div>
+        <div class="pr-kpi">
+          <div class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" /> <line x1="8" x2="16" y1="6" y2="6" /> <line x1="16" x2="16" y1="14" y2="18" /> <path d="M16 10h.01" /> <path d="M12 10h.01" /> <path d="M8 10h.01" /> <path d="M12 14h.01" /> <path d="M8 14h.01" /> <path d="M12 18h.01" /> <path d="M8 18h.01" /></svg><span>ML Prediction</span></div>
+          <div class="v" id="kpi-mlpred">2.35</div>
+          <p class="s" id="kpi-mlpred-sub">g / fish / day</p>
+        </div>
+        <div class="pr-kpi">
+          <div class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /> <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /> <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></svg><span>Multiplier</span></div>
+          <div class="v" id="kpi-mult">×1</div>
+          <p class="s" id="kpi-mult-sub">Standard rate</p>
+        </div>
+        <div class="pr-kpi">
+          <div class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /> <path d="m9 12 2 2 4-4" /></svg><span>Confidence</span></div>
+          <div class="v" id="kpi-conf">High</div>
+          <p class="s" id="kpi-conf-sub">Model confidence</p>
+        </div>
+          </div>
+        </div>
+
+        <div class="card pr-alerts">
+          <h2 class="panel-title">Parameter Alerts</h2>
+          <div class="alert-banner" id="alert-banner" data-state="good">
+            <span id="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /> <path d="m16 9-5.5 5.5L8 12" /></svg></span>
+            <span class="t" id="alert-text">All parameters are within safe range.</span>
+          </div>
+        </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="page flow" id="page-analytics">
+    <div class="ov-wrap pr-wrap">
+      <div class="hero" style="margin-bottom:40px">
+        <h1>Analytics</h1>
+        <p>Historical trends and ML model insights</p>
+      </div>
+      <div class="an-grid" id="an-grid">
+      <div class="an-card">
+        <div class="an-head">
+          <h2><span class="ic" style="color:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" /></svg></span>Temperature vs DO (48h)</h2>
+          <div class="an-legend"><button type="button" class="lg" data-chart="tempdo" data-idx="0" aria-pressed="true"><i style="background:#F97316"></i>Temperature</button><button type="button" class="lg" data-chart="tempdo" data-idx="1" aria-pressed="true"><i style="background:var(--accent)"></i>Dissolved O₂</button></div>
+        </div>
+        <div class="an-chart"><canvas id="chartTempDO"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-head">
+          <h2><span class="ic" style="color:#818CF8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /> <path d="M6.453 15h11.094" /> <path d="M8.5 2h7" /></svg></span>pH Trend (48h)</h2>
+          <div class="an-legend"><button type="button" class="lg" data-chart="ph" data-idx="0" aria-pressed="true"><i style="background:#6366F1"></i>pH Level</button></div>
+        </div>
+        <div class="an-chart"><canvas id="chartPH"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-head">
+          <h2><span class="ic" style="color:#F43F5E"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2" /> <path d="M8.5 2h7" /> <path d="M14.5 16h-5" /></svg></span>Ammonia &amp; Nitrate (48h)</h2>
+          <div class="an-legend"><button type="button" class="lg" data-chart="ammo" data-idx="0" aria-pressed="true"><i style="background:#EF4444"></i>Ammonia</button><button type="button" class="lg" data-chart="ammo" data-idx="1" aria-pressed="true"><i style="background:#10B981"></i>Nitrate</button></div>
+        </div>
+        <div class="an-chart"><canvas id="chartAmmoniaNitrate"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-head">
+          <h2><span class="ic" style="color:#10B981"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></svg></span>WQI Trend (48h)</h2>
+          <div class="an-legend"><button type="button" class="lg" data-chart="wqi" data-idx="0" aria-pressed="true"><i style="background:var(--accent)"></i>WQI Score</button></div>
+        </div>
+        <div class="an-chart"><canvas id="chartWQI"></canvas></div>
+      </div>
+      </div>
+      <div class="an-btn-row">
+        <button type="button" id="open-ml-modal-btn" class="an-btn" onclick="openModelModal()">
+          <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v2" /> <path d="M12 2v2" /> <path d="M17 20v2" /> <path d="M17 2v2" /> <path d="M2 12h2" /> <path d="M2 17h2" /> <path d="M2 7h2" /> <path d="M20 12h2" /> <path d="M20 17h2" /> <path d="M20 7h2" /> <path d="M7 20v2" /> <path d="M7 2v2" /> <rect x="4" y="4" width="16" height="16" rx="2" /> <rect x="8" y="8" width="8" height="8" rx="1" /></svg><span>ML Model Information</span><svg class="trail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6" /> <path d="M10 14 21 3" /> <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEDERATED LEARNING & SMPC -->
+  <div class="page flow" id="page-federated">
+    <div class="ov-wrap pr-wrap">
+      <div class="pr-stack">
+
+        <div class="hero">
+          <h1>Federated Learning &amp; SMPC</h1>
+          <p>Privacy-preserving distributed training with secure aggregation across all fish ponds</p>
+        </div>
+
+        <div class="fl-grid">
+
+          <section class="fl-panel">
+            <h2 class="fl-title cfg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3" /> <path d="M12 19H3" /> <path d="M14 3v4" /> <path d="M16 17v4" /> <path d="M21 12h-9" /> <path d="M21 19h-5" /> <path d="M21 5h-7" /> <path d="M8 10v4" /> <path d="M8 12H3" /></svg>Training Configuration</h2>
+            <div class="fl-fields">
+              <label><span class="fl-lbl">Rounds <em>2-50</em></span><input id="fl-rounds" type="number" min="2" max="50" value="10" class="field" /></label>
+              <label><span class="fl-lbl">Ponds <em>2-11</em></span><input id="fl-ponds" type="number" min="2" max="11" value="8" class="field" /></label>
+              <label><span class="fl-lbl">DP noise <em>0 = off</em></span><input id="fl-dp" type="number" min="0" max="2" step="0.1" value="0.0" class="field" /></label>
+            </div>
+            <button id="fl-start-btn" class="fl-start" onclick="startFL()"><span class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></svg></span><span class="bt">Start Federated Training</span></button>
+
+            <div id="fl-status-section" class="fl-status" hidden>
+              <h2 class="fl-title cfg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></svg>Training Status</h2>
+              <div id="fl-message" hidden></div>
+              <div class="fl-prog">
+                <div class="row"><span>Round progress</span><b id="fl-round-label">0 / 0</b></div>
+                <div class="bar"><div id="fl-progress-bar" class="fill" style="width:0%"></div></div>
+                <div class="fl-tiles">
+                  <div class="tile"><div class="l">Avg RMSE</div><div class="v" id="fl-rmse">-</div></div>
+                  <div class="tile"><div class="l">Avg R²</div><div class="v mint" id="fl-r2">-</div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="fl-panel fl-contrib">
+            <h2 class="fl-title users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" /></svg>Client Contributions</h2>
+            <div id="fl-contrib-empty" class="fl-empty">
+              <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /> <path d="M3 5V19A9 3 0 0 0 21 19V5" /> <path d="M3 12A9 3 0 0 0 21 12" /></svg></div>
+              <p class="a">No data yet</p>
+              <p class="b">Client metrics will appear after training</p>
+            </div>
+            <div id="fl-contrib" class="fl-cards" hidden></div>
+          </section>
+
+          <section class="fl-panel fl-wide">
+            <h2 class="fl-title users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17h6v-6" /> <path d="m22 17-8.5-8.5-5 5L2 7" /></svg>Convergence: Global RMSE per Round</h2>
+            <div class="fl-chart">
+              <canvas id="fl-chart" aria-label="Global RMSE per round chart"></canvas>
+              <div id="fl-chart-empty" class="fl-empty abs">
+                <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v5" /> <path d="M16 14.639V21" /> <path d="M20 10.656V21" /> <path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15" /> <path d="M4 18.463V21" /> <path d="M8 14.656V21" /></svg></div>
+                <p class="a">No training run yet</p>
+                <p class="b">Start training to visualize convergence</p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <div class="fl-protocol">
+          <h2 class="panel-title" style="margin-bottom:8px">Secure Multi-Party Computation Protocol Architecture</h2>
+          <div class="fl-steps">
+        <div class="fl-step"><div class="num">1</div><h4>Local Model Training</h4><p>Raw aquaculture sensor telemetry stays local. Edge devices train gradient weights independently on local pond datasets.</p></div>
+        <div class="fl-step"><div class="num">2</div><h4>SMPC Secret Sharing</h4><p>Weight vectors are split into polynomial secret shares. Individual shares reveal zero statistical info on raw pond metrics.</p></div>
+        <div class="fl-step"><div class="num">3</div><h4>Global Weight Synthesis</h4><p>The central coordinator reconstructs only the sum of gradients, updating the global model without seeing individual node data.</p></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ABOUT US: blue section under the home page -->
+<section class="about" id="about">
+  <div class="about-bg" role="img" aria-label=""></div>
+  <div class="about-inner">
+    <div class="about-text">
+      <div class="about-eyebrow">About Us</div>
+      <h2 class="about-title">Smarter feeding for healthier fish</h2>
+      <p class="about-lead">
+        AquaSmart is a smart aquaculture platform built as a summer internship project at SESAME Engineering School.
+        It combines IoT water-quality data, machine learning and privacy-preserving federated learning to help fish farmers
+        decide when to feed and how much.
+      </p>
+      <p class="about-lead">
+        By reading every pond's water quality in real time, the system reduces feed waste and protects fish health, while
+        federated learning with secure aggregation keeps each farm's data private.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ML Model Information pop-up -->
+<div class="modal-backdrop" id="ml-modal-backdrop" hidden>
+  <div class="modal-card" id="ml-modal-card" role="dialog" aria-modal="true" aria-labelledby="ml-modal-title">
+    <button type="button" class="modal-x" id="close-ml-modal-btn" aria-label="Close" onclick="closeModelModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></svg></button>
+    <div class="modal-head">
+      <div class="ib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v2" /> <path d="M12 2v2" /> <path d="M17 20v2" /> <path d="M17 2v2" /> <path d="M2 12h2" /> <path d="M2 17h2" /> <path d="M2 7h2" /> <path d="M20 12h2" /> <path d="M20 17h2" /> <path d="M20 7h2" /> <path d="M7 20v2" /> <path d="M7 2v2" /> <rect x="4" y="4" width="16" height="16" rx="2" /> <rect x="8" y="8" width="8" height="8" rx="1" /></svg></div>
+      <div><h2 id="ml-modal-title">ML Model Information</h2><p>Architecture and details for feed prediction</p></div>
+    </div>
+    <div id="ml-modal-body"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Floating AquaBot chat -->
+<button class="chat-fab" id="chat-fab" aria-label="Open AquaBot chat" onclick="toggleChat()">
+  <svg class="ic-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /></svg>
+  <svg class="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+</button>
+<div class="chat-fab-label">Ask AquaBot</div>
+
+<div class="chat-panel" id="chat-panel" role="dialog" aria-label="AquaBot chat">
+  <div class="chat-header">
+    <div class="chat-avatar">AB</div>
+    <div>
+      <div class="name">AquaBot</div>
+      <div class="state"><i></i> Online, aquaculture assistant</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat(false)" aria-label="Close chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="chat-messages" id="chat-messages">
+    <div class="message bot">
+      <div class="msg-avatar bot">AB</div>
+      <div>
+        <div class="msg-bubble">
+          Hello! I'm <strong>AquaBot</strong>, your fish farming assistant. I can help with:<br><br>
+          &bull; Water quality (temperature, DO, pH, turbidity, ammonia)<br>
+          &bull; Feeding rates, schedules and strategies<br>
+          &bull; Disease prevention and WQI interpretation<br>
+          &bull; Feed Conversion Ratio (FCR) tips<br><br>
+          What would you like to know?
+        </div>
+        <div class="suggestions" id="initial-suggestions">
+          <span class="suggestion-chip" onclick="sendSuggestion(this)">What is optimal temperature?</span>
+          <span class="suggestion-chip" onclick="sendSuggestion(this)">How much should I feed?</span>
+          <span class="suggestion-chip" onclick="sendSuggestion(this)">What is WQI?</span>
+          <span class="suggestion-chip" onclick="sendSuggestion(this)">Signs of disease?</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <input class="chat-input" id="chat-input" type="text" placeholder="Ask about water quality, feeding, fish health..."
+           onkeydown="if(event.key==='Enter')sendChat()" />
+    <button class="chat-send" onclick="sendChat()" aria-label="Send message">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

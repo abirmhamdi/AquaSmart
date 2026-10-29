@@ -1,0 +1,38 @@
+{
+  "model": "XGBoost",
+  "task": "regression",
+  "target": "feed_ration_g",
+  "features": [
+    "temperature",
+    "dissolved_oxygen",
+    "ph",
+    "turbidity",
+    "ammonia",
+    "nitrate",
+    "fish_weight_g",
+    "thermal_stress",
+    "do_deficit",
+    "do_ok",
+    "ph_deviation",
+    "ph_acidic",
+    "ph_alkaline",
+    "turbidity_high",
+    "ammonia_toxic",
+    "water_quality_index",
+    "env_stress_index",
+    "temp_x_do",
+    "ph_x_do",
+    "turb_x_temp",
+    "temp_sq",
+    "growth_stage"
+  ],
+  "training_samples": 141768,
+  "test_samples": 25018,
+  "test_metrics": {
+    "mae": 0.10564559698104858,
+    "rmse": 0.22570687722335062,
+    "r2": 0.9853734970092773
+  },
+  "source": "real 11-pond dataset via fl_smpc.data (previously: synthetic demo model)",
+  "note": "Trained by fl_smpc/train_production_model.py"
+}
